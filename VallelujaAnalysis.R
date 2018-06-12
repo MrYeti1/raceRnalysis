@@ -1,9 +1,10 @@
-resultsUrl <- "https://www.rootsandrain.com/race6667/2018-mar-25-tweedlove-whyte-vallelujah-glentress/results/filters/overall/ajax/filtered-content/race-results?/filters/overall/&format=overall&sex=&s1=-1"
+devtools::install("raceRnalysis")
+library(raceRnalysis)
+library(dplyr)
+library(ggplot2)
 
-#webpageResponse <- httr::GET(url=resultsUrl)
-#httr::stop_for_status(webpageResponse)
-#webpageContent <- httr::content(webpageResponse)
-#resultsTable <- XML::readHTMLTable(webpageResponse)
+resultsUrl <- "https://www.rootsandrain.com/race6667/2018-mar-25-tweedlove-whyte-vallelujah-glentress/results/filters/overall/ajax/filtered-content/race-results?/filters/overall/&format=overall&sex=&s1=-1"
+resultsUrl <- "https://www.rootsandrain.com/race6668/2018-jun-10-tweedlove-uk-enduro-national-champs-18-glentress/results/filters/overall/ajax/filtered-content/race-results?/filters/overall/&format=overall&sex=&s1=-1"
 
 webPageCurl <- RCurl::getURL(resultsUrl)
 
@@ -16,28 +17,29 @@ addMissingMin <- function(x) { if_else(grepl("^[0-9]+:", x), x, paste0("0:", x))
 x <- c("26.41", "1:26.41")
 x %>% addMissingMin()
 
-
 as.time <- function(x) { as.POSIXct(x, format="%M:%OS") }
 
+guessedStageNames <- c("Morning ...", "Fool's G...", "Scotland...", "F.E.A.R.", "Born Sli...", "There's ...")
 
-resultsTable <- rawResultsTable %>%
-  select(-one_of(c("")), - starts_with("Rank")) %>%
-  mutate_at(.vars=vars(starts_with("Stage")), .funs=stripRank) %>%
-  mutate_at(.vars=vars(starts_with("Stage")), .funs=addMissingMin) %>%
-  mutate_at(.vars=vars(starts_with("Stage")), .funs=funs(lub=lubridate::ms, at = as.time)) %>%
-  mutate(highlight = Name %in% c("James CLEWS", "Rob GROVES")) #%>% filter(highlight) #%>% glimpse()
+normResultsTable <- rawResultsTable %>%
+  raceRnalysis::normaliseResultsTable(guessedStageNames) %>%
+  raceRnalysis::extractSex(Category) %>%
+  raceRnalysis::highlightNames(Name, c("James CLEWS", "Rob GROVES", "Nicholas SMITH"))
+
+
+resultsTable <- normResultsTable %>% raceRnalysis::stageTimesToSeconds()
 
 resultsTable %>% glimpse
 
 
-ggplot(NULL, aes(y=lubridate::period_to_seconds(`Stage 6_lub`)/60, x=1, color=highlight)) +
-  ggbeeswarm::geom_quasirandom(data=resultsTable[resultsTable$highlight == F,], alpha=0.5) +
-  geom_jitter(data=resultsTable[resultsTable$highlight == T,], width = 0.1)
-ggplot(resultsTable, aes(y=`Stage 6`, x=1, color=highlight)) + ggbeeswarm::geom_quasirandom()
+#ggplot(NULL, aes(y=lubridate::period_to_seconds(`Stage 6_lub`)/60, x=1, color=highlight)) +
+#  ggbeeswarm::geom_quasirandom(data=resultsTable[resultsTable$highlight == F,], alpha=0.5) +
+#  geom_jitter(data=resultsTable[resultsTable$highlight == T,], width = 0.1)
+#ggplot(resultsTable, aes(y=`Stage 6`, x=1, color=highlight)) + ggbeeswarm::geom_quasirandom()
 
 
 resultsStages <- resultsTable %>% select("Name", "Bib", "Category", "Sponsors", "highlight", "Diff", ends_with("_lub")) %>%
-  mutate_at(vars(ends_with("_lub")), .funs=lubridate::period_to_seconds) %>%
+  #mutate_at(vars(ends_with("_lub")), .funs=lubridate::period_to_seconds) %>%
   rename_at(vars(ends_with("_lub")), function(rankname) { return(gsub("(.*)_lub", "\\1", rankname))}) %>%
   reshape2::melt(id=c("Name", "Bib", "Category", "Sponsors", "highlight", "Diff"))
 
@@ -65,20 +67,20 @@ rankedCumulativeResultsTable <- resultsTable %>% #[resultsTable$Category == "19-
   mutate_at(vars(starts_with("Cum")), .funs=funs(rank=rank))
 
 
-rankedCumulative <- rankedCumulativeResultsTable %>% select("Name", "Bib", "Category", "Sponsors", "highlight", "Diff", ends_with("_rank")) %>%
+rankedCumulative <- rankedCumulativeResultsTable %>% select("Name", "Bib", "Category", "Sponsors", "highlight", "highlightSex", "Diff", ends_with("_rank")) %>%
   rename_at(vars(ends_with("_rank")), function(rankname) { return(gsub("Cum (.*)_rank", "\\1", rankname))}) %>%
-  reshape2::melt(id=c("Name", "Bib", "Category", "Sponsors", "highlight", "Diff"), value.name="Rank", variable.name="After")
+  reshape2::melt(id=c("Name", "Bib", "Category", "Sponsors", "highlight", "highlightSex", "Diff"), value.name="Rank", variable.name="After")
 
 
-ggplot(NULL, aes(x=`After`, y=Rank, color=as.factor(highlight), group=Bib)) +
+ggplot(NULL, aes(x=`After`, y=Rank, color=highlightSex, group=Bib)) +
   geom_line(data=rankedCumulative %>% filter(!highlight), alpha=0.3) +
   geom_line(data=rankedCumulative %>% filter(highlight)) +
-  ggtitle("Rank after each stage - Senior") +
-  scale_color_brewer(guide=F, palette = "Paired") +
+  ggtitle("Rank after each stage") +
+  scale_color_brewer(guide=F, palette = "Paired", drop=F) +
   scale_y_reverse(breaks=ggthemes::extended_range_breaks()(rankedCumulative$Rank)) +
   ggthemes::geom_rangeframe(data=rankedCumulative, color="black") +
   theme_minimal() +
   geom_text(data=rankedCumulative %>% filter(highlight) %>% filter(After == "Stage 1"), aes(x=After, y=Rank, label=Rank), hjust = 1.1) +
   geom_text(data=rankedCumulative %>% filter(highlight) %>% filter(After == "Stage 6"), aes(x=After, y=Rank, label=Rank), hjust=-0.1) +
   ggrepel::geom_text_repel(data=rankedCumulative %>% filter(highlight) %>% filter(After == "Stage 4"), aes(x=After, y=Rank, label=Name))
-ggsave(path="~", file="Valleluja-Senior-CumulativeRank.png", width=7, height=7)
+#ggsave(path="~", file="Valleluja-Senior-CumulativeRank.png", width=7, height=7)

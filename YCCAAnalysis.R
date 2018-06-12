@@ -1,31 +1,29 @@
-resultsUrl <- "http://results.smartiming.co.uk/view-race/yccasummer2018rd3over14/" #Broken due to weird Lap / Lap 1 swap
-resultsUrl <- "http://results.smartiming.co.uk/view-race/yccasummer2018rd4over14/"
+
+library(raceRnalysis)
+library(dplyr)
+library(ggplot2)
 
 #webpageResponse <- httr::GET(url=resultsUrl)
 #httr::stop_for_status(webpageResponse)
 #webpageContent <- httr::content(webpageResponse)
 #resultsTable <- XML::readHTMLTable(webpageContent)
+resultsUrl <- "http://results.smartiming.co.uk/view-race/yccasummer2018rd3over14/" #Broken due to weird Lap / Lap 1 swap
+resultsUrl <- "http://results.smartiming.co.uk/view-race/yccasummer2018rd4over14/"
 
 webPageCurl <- RCurl::getURL(resultsUrl)
 
 rawResultsTable <- XML::readHTMLTable(webPageCurl)$`dt-user-list`
 
 
-as.time <- function(x) { as.POSIXct(x, format="%M:%OS") }
 
-#If there is an Outlap, or...  then rename it to Lap0
-if ("OutLap" %in% (rawResultsTable %>% colnames())) { rawResultsTable <- rawResultsTable %>% rename("Lap0" = "OutLap")}
 
-resultsTable <- rawResultsTable %>% filter(Sex != "N") %>% mutate(
-  fullName = paste(`First Name`, Surname),
-  Sex = forcats::fct_drop(Sex) %>% forcats::fct_infreq(),
-  highlight = fullName %in% c("James Clews", "Robin Groves", "Robyn Culshaw", "Nick Smith"),
-  highlightSex = paste0(Sex, highlight) %>% factor(levels = c("MFALSE","MTRUE","FFALSE","FTRUE"))
-  ) %>%
+normResultsTable <- raceRnalysis::normaliseResultsTable(rawResultsTable)
+resultsTable <- normResultsTable %>% filter(Sex != "N") %>% mutate(
+  fullName = paste(`First Name`, Surname)) %>%
+  raceRnalysis::extractSex() %>%
+  raceRnalysis::highlightNames(fullName, c("James Clews", "Robin Groves", "Robyn Culshaw", "Nick Smith")) %>%
   mutate_at(.vars=vars(starts_with("Place")), .funs=as.numeric) %>%
-  mutate_at(.vars=vars(matches("^Lap[0-9]+")), as.character) %>%
-  mutate_at(.vars=vars(matches("^Lap[0-9]+")), .funs=funs(lub=lubridate::ms, at = as.time)) %>%
-  mutate_at(.vars=vars(ends_with("_lub")), .funs=funs(sec=lubridate::period_to_seconds)) %>%
+  raceRnalysis::stageTimesToSeconds() %>%
   arrange(`Place Overall`)
 
 
@@ -38,7 +36,7 @@ resultsTable %>% glimpse
 #ggplot(resultsTable, aes(y=`Lap1_at`, x=1, color=highlight)) + ggbeeswarm::geom_quasirandom()
 
 
-resultsStages <- resultsTable %>% select("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex", ends_with("_lub_sec")) %>%
+resultsStages <- resultsTable %>% select("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex", ends_with("_lub")) %>%
   rename_at(vars(ends_with("_lub_sec")), function(rankname) { return(gsub("(.*)_lub", "\\1", rankname))}) %>%
   reshape2::melt(id=c("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex"))
 maxTime <- max(resultsStages$value %>% na.omit()) + 10
@@ -57,14 +55,14 @@ ggplot() + geom_boxplot(data=resultsStages, aes(y=value/60, x=variable), fill="g
 
 
 rankedCumulativeLaps <- resultsTable %>%
-  select(Bib, ends_with("_lub_sec")) %>%
+  select(Bib, ends_with("_lub")) %>%
   reshape2::melt() %>%
   group_by(Bib) %>%
   mutate(cum=cumsum(ifelse(is.na(value), maxTime, value))) %>%
   ungroup() %>%
   select(-value) %>%
   reshape2::dcast(Bib ~ variable) %>%
-  rename_at(.vars=vars(matches("Lap[0-9]+_lub_sec")), .funs=funs( gsub("Lap([0-9]+).*", "Cum Lap \\1", .)))  %>%
+  rename_at(.vars=vars(matches("Stage [0-9]+_lub")), .funs=funs( gsub("Stage ([0-9]+).*", "Cum Stage \\1", .)))  %>%
   mutate_at(vars(starts_with("Cum")), .funs=funs(rank=rank))
 
 rankedCumulativeResultsTable <- inner_join(resultsTable %>% select("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex"), rankedCumulativeLaps, by="Bib")

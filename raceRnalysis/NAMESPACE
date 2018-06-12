@@ -1,0 +1,7 @@
+importFrom(magrittr,"%>%")
+export(hello)
+
+export(normaliseResultsTable)
+export(extractSex)
+export(highlightNames)
+export(stageTimesToSeconds)
