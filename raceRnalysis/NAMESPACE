@@ -6,5 +6,7 @@ export(extractSex)
 export(highlightNames)
 export(stageTimesToSeconds)
 
+export(meltTimePerLap)
+
 export(plotTimePerLap)
 export(plotRankCumulative)

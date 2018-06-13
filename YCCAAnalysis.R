@@ -30,12 +30,10 @@ resultsTable %>% glimpse
 
 ########
 
-resultsStages <- resultsTable %>% select("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex", ends_with("_lub")) %>%
-  rename_at(vars(ends_with("_lub_sec")), function(rankname) { return(gsub("(.*)_lub", "\\1", rankname))}) %>%
-  reshape2::melt(id=c("fullName", "Bib", "Category", "Sex", "Club", "highlight", "highlightSex"))
-maxTime <- max(resultsStages$value %>% na.omit()) + 10
 
 
+resultsStages <- resultsTable %>% raceRnalysis::meltTimePerLap()
+maxTime <- max(resultsStages$stage_value %>% na.omit()) + 10
 raceRnalysis::plotTimePerLap(resultsStages, eventTitle="YCCA Round 4", stageTranslation="Lap", "~/Desktop/ycca-4-timePerLap.png")
 
 

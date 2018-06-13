@@ -25,10 +25,7 @@ resultsTable %>% glimpse
 
 ######
 
-resultsStages <- resultsTable %>% select("Name", "Bib", "Category", "Sponsors", "highlight", "highlightSex", "Diff", ends_with("_lub")) %>%
-  #mutate_at(vars(ends_with("_lub")), .funs=lubridate::period_to_seconds) %>%
-  rename_at(vars(ends_with("_lub")), function(rankname) { return(gsub("(.*)_lub", "\\1", rankname))}) %>%
-  reshape2::melt(id=c("Name", "Bib", "Category", "Sponsors", "highlight", "highlightSex", "Diff"))
+resultsStages <- resultsTable %>% raceRnalysis::meltTimePerLap()
 
 raceRnalysis::plotTimePerLap(resultsStages, eventTitle="Tweedlove British Enduro", outfile = "~/Desktop/tweed-champs-TimePerStage.png")
 

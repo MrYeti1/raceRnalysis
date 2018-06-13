@@ -6,9 +6,9 @@ plotTimePerLap <- function(resultsStages, eventTitle="", stageTranslation="Stage
   dotAlpha = nBibs * -0.001333 + 0.9777
 
   p <- ggplot() +
-    geom_boxplot(data=resultsStages, aes(y=value/60, x=variable), fill="grey91") +
-    ggbeeswarm::geom_quasirandom(data=resultsStages %>% filter(!highlight), aes(y=value/60, x=variable, color=highlightSex), size=0.75, alpha=dotAlpha) +
-    geom_jitter(data=resultsStages %>% filter(highlight), aes(y=value/60, x=variable, color=highlightSex), width=0.2) +
+    geom_boxplot(data=resultsStages, aes(y=stage_value/60, x=stage_number), fill="grey91") +
+    ggbeeswarm::geom_quasirandom(data=resultsStages %>% filter(!highlight), aes(y=stage_value/60, x=stage_number, color=highlightSex), size=0.75, alpha=dotAlpha) +
+    geom_jitter(data=resultsStages %>% filter(highlight), aes(y=stage_value/60, x=stage_number, color=highlightSex), width=0.2) +
     scale_color_brewer(guide = F, palette = "Paired", drop=F) +
     ylab("Minutes") +
     xlab(stageTranslation) +

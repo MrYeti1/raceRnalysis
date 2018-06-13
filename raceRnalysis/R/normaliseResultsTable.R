@@ -50,9 +50,10 @@ highlightNames <- function(resultsTable, suggestedNameColumn, namesToHighlight) 
   )
 }
 
-
+#' RootsAndRain shows the rank within each stage in the stage time - keep only the time info
 stripRank <- function(x) { return(gsub("(([0-9]+:)?[0-9]+.[0-9]+).*", "\\1", x)) }
 
+#' Some sites with laps under one minute don't include any minute prefix
 addMissingMin <- function(x) { ifelse(grepl("^[0-9]+:", x), x, paste0("0:", x)) }
 
 #' Tidy up the stage time strings, and convert to seconds '_lub' suffix
