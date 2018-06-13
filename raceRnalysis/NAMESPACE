@@ -5,3 +5,6 @@ export(normaliseResultsTable)
 export(extractSex)
 export(highlightNames)
 export(stageTimesToSeconds)
+
+export(plotTimePerLap)
+export(plotRankCumulative)

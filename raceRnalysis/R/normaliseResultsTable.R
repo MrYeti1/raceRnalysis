@@ -50,8 +50,9 @@ highlightNames <- function(resultsTable, suggestedNameColumn, namesToHighlight) 
   )
 }
 
+
 stripRank <- function(x) { return(gsub("(([0-9]+:)?[0-9]+.[0-9]+).*", "\\1", x)) }
-#"51.56 (12)", "1:09.04 (1)"
+
 addMissingMin <- function(x) { ifelse(grepl("^[0-9]+:", x), x, paste0("0:", x)) }
 
 #' Tidy up the stage time strings, and convert to seconds '_lub' suffix
