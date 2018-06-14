@@ -1,5 +1,4 @@
 importFrom(magrittr,"%>%")
-export(hello)
 
 export(normaliseResultsTable)
 export(extractSex)
@@ -7,6 +6,8 @@ export(highlightNames)
 export(stageTimesToSeconds)
 
 export(meltTimePerLap)
+export(meltCumulativeRank)
+
 
 export(plotTimePerLap)
 export(plotRankCumulative)

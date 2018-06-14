@@ -32,22 +32,6 @@ raceRnalysis::plotTimePerLap(resultsStages, eventTitle="Tweedlove British Enduro
 
 ######
 
-rankedCumulativeResultsTable <- resultsTable %>% #[resultsTable$Category == "19-29",] %>%
-  mutate(
-    `Cum Stage 1` = `Stage 1_lub`,
-    `Cum Stage 2` = `Cum Stage 1` + `Stage 2_lub`,
-    `Cum Stage 3` = `Cum Stage 2` + `Stage 3_lub`,
-    `Cum Stage 4` = `Cum Stage 3` + `Stage 4_lub`,
-    `Cum Stage 5` = `Cum Stage 4` + `Stage 5_lub`,
-    `Cum Stage 6` = `Cum Stage 5` + `Stage 6_lub`,
-  ) %>%
-  mutate_at(vars(starts_with("Cum")), .funs=funs(rank=rank))
-
-
-rankedCumulative <- rankedCumulativeResultsTable %>% select("Name", "Bib", "Category", "Sponsors", "Sex", "highlight", "highlightSex", "Diff", ends_with("_rank")) %>%
-  rename_at(vars(ends_with("_rank")), function(rankname) { return(gsub("Cum (.*)_rank", "\\1", rankname))}) %>%
-  reshape2::melt(id=c("Name", "Bib", "Category", "Sponsors", "Sex", "highlight", "highlightSex", "Diff"), value.name="Rank", variable.name="After") %>%
-  rename(fullName = Name)
-
+rankedCumulative <- resultsTable %>% raceRnalysis::meltCumulativeRank() %>% rename(fullName = Name)
 
 raceRnalysis::plotRankCumulative(rankedCumulative, eventTitle="Tweedlove British Enduro", outfile="~/Desktop/tweed-champs-rankedCumulative.png")

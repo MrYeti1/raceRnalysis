@@ -12,5 +12,8 @@ LazyData: true
 Suggests: testthat
 Imports:
   dplyr,
-  magrittr
+  magrittr,
+  reshape2,
+  ggplot2,
+  ggbeeswarm
 RoxygenNote: 6.0.1
