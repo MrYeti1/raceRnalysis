@@ -1,6 +1,6 @@
 
 plotTimePerLap <- function(resultsStages, eventTitle="", stageTranslation="Stage", outfile=NA) {
-  nLaps = resultsStages$variable %>% nlevels()
+  nLaps = resultsStages$stage_number %>% nlevels()
   nBibs = resultsStages$Bib %>% nlevels()
 
   dotAlpha = nBibs * -0.001333 + 0.9777
@@ -19,7 +19,7 @@ plotTimePerLap <- function(resultsStages, eventTitle="", stageTranslation="Stage
     theme(plot.background = element_rect(fill="grey90"))
 
   if (!is.na(outfile)) {
-    ggsave(file=outfile, plot=p, width=2+(nLaps*0.5), height=7)
+    ggsave(file=outfile, plot=p, width=2+(nLaps*0.5), height=7, dpi=300)
 
   }
   return(p)
@@ -45,7 +45,7 @@ plotRankCumulative <- function(rankedCumulative, eventTitle="", stageTranslation
     theme(plot.background = element_rect(fill="grey90"))
 
   if (!is.na(outfile)) {
-    ggsave(file=outfile, plot=p, width=2+(nLaps*0.5), height=7)
+    ggsave(file=outfile, plot=p, width=2+(nLaps*0.5), height=7, dpi=300)
   }
   return(p)
 }
