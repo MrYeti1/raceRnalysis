@@ -29,6 +29,7 @@ plotRankCumulative <- function(rankedCumulative, eventTitle="", stageTranslation
   nLaps = rankedCumulative$After %>% nlevels()
   firstLap = rankedCumulative$After %>% levels() %>% head(1)
   lastLap = rankedCumulative$After %>% levels() %>% tail(1)
+  #TODO angle the x-axis text if there are too many controls
 
   p <- ggplot(NULL, aes(x=`After`, y=Rank, color=highlightSex, group=paste0(Bib, Category))) +
     geom_line(data=rankedCumulative %>% filter(!highlight), alpha=0.4) +
@@ -41,8 +42,9 @@ plotRankCumulative <- function(rankedCumulative, eventTitle="", stageTranslation
     theme_minimal() +
     geom_text(data=rankedCumulative %>% filter(highlight) %>% filter(After == firstLap), aes(x=After, y=Rank, label=Rank), hjust = 1.1) +
     geom_text(data=rankedCumulative %>% filter(highlight) %>% filter(After == lastLap), aes(x=After, y=Rank, label=Rank), hjust=-0.1) +
-    ggrepel::geom_text_repel(data=rankedCumulative %>% filter(highlight) %>% filter(After == paste0("Stage 5")), aes(x=After, y=Rank, label=fullName)) +
-    theme(plot.background = element_rect(fill="grey90"))
+    ggrepel::geom_text_repel(data=rankedCumulative %>% filter(highlight) %>% filter(After == paste0("Stage 10")), aes(x=After, y=Rank, label=fullName), force=5, hjust=0.5 ) +
+    theme(plot.background = element_rect(fill="grey90"),
+          axis.text.x = element_text(angle=60, hjust=1))
 
   if (!is.na(outfile)) {
     ggsave(file=outfile, plot=p, width=2+(nLaps*0.5), height=7, dpi=300)

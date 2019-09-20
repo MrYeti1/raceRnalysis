@@ -34,7 +34,7 @@ extractSex <- function(resultsTable, suggestedColumnName) {
   suggestedColumn <- dplyr::enquo(suggestedColumnName)
   resultsTable %>% dplyr::mutate(
     #Sex = !!dplyr::enquo(suggestedColumnName) %>% gsub("(.*)\\(([M|F])\\)", "\\2", .)
-    Sex = ifelse(stringr::str_detect(!!suggestedColumn, "\\([F]\\)$"), "F", "M")
+    Sex = ifelse(stringr::str_detect(!!suggestedColumn, "[F|W]"), "F", "M")
   )
 
 }
@@ -52,6 +52,7 @@ highlightNames <- function(resultsTable, suggestedNameColumn, namesToHighlight) 
 
 #' RootsAndRain shows the rank within each stage in the stage time - keep only the time info
 stripRank <- function(x) { return(gsub("(([0-9]+:)?[0-9]+.[0-9]+).*", "\\1", x)) }
+stripRank <- function(x) { return(gregexpr("(([0-9]+:)?[0-9]{1,2}[.:][0-9]+)", x) %>% regmatches(x, .)  %>% lapply(FUN=dplyr::last) ) }
 
 #' Some sites with laps under one minute don't include any minute prefix
 addMissingMin <- function(x) { ifelse(grepl("^[0-9]+:", x), x, paste0("0:", x)) }

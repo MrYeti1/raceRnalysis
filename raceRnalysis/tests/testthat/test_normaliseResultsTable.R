@@ -24,6 +24,16 @@ test_that("extractSex takes the sex from a column with gender in brackets", {
   )
 })
 
+test_that("extractSex takes the sex from a column with gender in brackets", {
+
+  t1 <- data.frame(`Bib`=c(1,2,3), `Cat` = c("M21", "M43", "W21"), `The start`=c(5,6,7), `Next one`=c(5,64,1), "FINISHING"=c(8,1,5), check.names=F)
+  actualSex <- extractSex(t1, Cat)$Sex
+  expect_equal(
+    actualSex,
+    c("M", "M", "F")
+  )
+})
+
 test_that("extractSex doesn't override a sex column", {
 
   t1 <- data.frame(`Bib`=c(1,2,3), `Sex` = c("M", "M", "F"), `The start`=c(5,6,7), `Next one`=c(5,64,1), "FINISHING"=c(8,1,5), check.names=F, stringsAsFactors = F)
@@ -59,8 +69,26 @@ test_that("highlightNames - produces highlightSex factor", {
 test_that("StripRank", {
   #"51.56 (12)", "1:09.04 (1)"
   expect_equal(
-    stripRank(c("51.56 (12)", "1:09.04 (1)", "01:09.04")),
+    #TODO Check that this works without unlisting for further functions
+    stripRank(c("51.56 (12)", "1:09.04 (1)", "01:09.04")) %>% unlist(),
               c("51.56", "1:09.04", "01:09.04")
+  )
+})
+
+test_that("StripRank", {
+  #"51.56 (12)", "1:09.04 (1)"
+  expect_equal(
+    #TODO Check that this works without unlisting for further functions
+    stripRank(c("51.56 (12)11.56 (2)", "1:09.04 (1)2:01.02 (3)", "01:09.04")) %>% unlist(),
+    c("11.56", "2:01.02", "01:09.04")
+  )
+})
+
+test_that("StripRank", {
+
+  expect_equal(
+    stripRank(c("19:59 (39th)\t\t\t\t\t\t\t\t\t\t\r\n0:09 (13th=)", "15:15 (1st)\r\n\t\t\t\t\t\t\t\t\t\t\r\n0:34 (3rd=)")) %>% unlist(),
+    c("0:09", "0:34")
   )
 })
 
