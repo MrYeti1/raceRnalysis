@@ -5,7 +5,7 @@ library(ggplot2)
 stopifnot(!is.null(athleteBearer)) #athleteBearer ~= "Bearer 1234562ce494d8642ed33789199dc3e085456123"
 
 MAXEVENTLENGTHMINS <- 60
-eventName <- "Meanwood"
+eventName <- "Rawdon"
 
 getFlybyActivityStream <- function (baseActivityId, compareActivityId) {
 
@@ -30,14 +30,17 @@ peopleActivities <- as.numeric(peopleActivityFrame$activityId); names(peopleActi
 
 activityPeople <- names(peopleActivities)
 names(activityPeople) <- peopleActivities
-controlsFrame <- read.csv(paste0("~/raceRnalysis/orienteeringControls/controls-", eventName,".csv"))
+
+allStreamsFrame <- peopleActivities %>% sapply(getFlybyActivityStream, baseActivityId=first(peopleActivities), simplify = F) %>% bind_rows() %>% mutate(activityId = as.factor(activityId))
+
+controlsFrame <- read.csv(paste0("~/raceRnalysis/orienteeringControls/controls-", eventName,".csv")) %>% mutate(control = as.character(control))
 
 ###############################
 ## Interactive Map with control destinations
 ###############################
 
 # Map with control destinations
-ggplot(allStreamsFrame %>% arrange(originalTime)) +
+ggplot(allStreamsFrame %>% arrange(time)) +
   geom_point(aes(x=long, y=lat, color=activityId, alpha=activityId == 1234567)) +
   scale_color_brewer(type="qual", labels=activityPeople, palette = "Dark2") +
   geom_point(data=controlsFrame, aes(x=longitude, y=latitude), size=10, color="purple", shape=1) + coord_quickmap() +
@@ -63,7 +66,6 @@ htmlwidgets::saveWidget("~/Desktop/mapClicker.html")
 ## Get Distance from points and visited controls
 ###############################
 
-allStreamsFrame <- peopleActivities %>% sapply(getFlybyActivityStream, baseActivityId=first(peopleActivities), simplify = F) %>% bind_rows() %>% mutate(activityId = as.factor(activityId))
 
 #Do you need to trim a single activity?
 #allStreamsFrame <- allStreamsFrame %>% filter((activityId == 1234567 & time < 1579118396) | activityId != 1234567 )
@@ -162,7 +164,7 @@ sortedControlPairTime <- controlPairTime %>%
 
 (numFastests <- sortedControlPairTime %>% group_by(controlPair) %>% mutate(first = min(time) == time) %>% ungroup %>% group_by(activityId, name) %>% summarise(numFastests = sum(first)))
 
-ggplot(sortedControlPairTime %>% group_by(controlPair) %>% mutate(first = min(time) == time), aes(y = reorder(controlPair, desc(controlPair)), x=time, color=activityId, size=first)) +
+ggplot(sortedControlPairTime %>% group_by(controlPair) %>% mutate(first = min(time) == time), aes(y = reorder(controlPair, desc(controlPair)), x=time/60, color=activityId, size=first)) +
   geom_point() +
   scale_x_continuous(breaks = seq(0, 100, 2) ) +
   scale_color_brewer(name="Person", type="qual", labels=activityPeople, palette = "Dark2") +
@@ -183,6 +185,44 @@ ggsave(paste0("~/Desktop/StravaControlsLegs-",eventName,".png"))
 
 
 
+controlPairs <- summedScore %>%
+  group_by(activityId) %>%
+  arrange(time) %>%
+  select(activityId, control, time) %>%
+  mutate(controlPair = paste0(control, " -> ", lead(control)), time = lead(time) - time) %>%
+  ungroup %>%
+  mutate(controlPair = forcats::fct_infreq(controlPair)) %>%
+  add_count(controlPair)
 
 
+reshape2::melt(controlPairs %>% select(activityId, controlPair), id="activityId")
 
+#TODO swap this to use activityIds
+controlPairTable <- table(controlPairs %>%
+                            mutate(name = activityPeople[as.character(activityId)]) %>%
+                            select(controlPair, name))
+controlPairFrame <- as.data.frame.matrix(controlPairTable)
+
+corTable <- cor(controlPairTable)
+
+###How similar was your route to another person
+corrplot::corrplot(corTable, type="upper", order="hclust")
+
+# meltedControlPairs <- controlPairTable %>% reshape2::melt(id=controlPair)
+#
+# peopleCombinations <- combn(unname(activityPeople), 2, simplify=F) %>% unlist(recursive=F)
+#
+# lapply(peopleCombinations %>% head(), function(x) { print(x); controlPairTable %>% as.data.frame.matrix() %>% group_by(.dots=x) %>% summarise(same = sum(vars(x)))})
+# controlPairFrame[,c("Rob", "John")]
+
+#Looking to sort
+#stringr::str_sort(summedScore$control, numeric=T)
+
+###If you did control X, what is the correlation to doing control Y
+corrplot::corrplot(cor(table(summedScore$activityId, summedScore$control)), type="upper")
+
+### Who did you have the most similar legs with:
+similarPeople <- lapply(activityPeople, function (x) { (controlPairFrame[,c(x)] * controlPairFrame[,!colnames(controlPairFrame) %in% c(x)]) %>% apply(FUN=sum, MARGIN = 2)  })
+similarPeopleRatio <- lapply(activityPeople, function (x) { (controlPairFrame[,c(x)] * controlPairFrame[,!colnames(controlPairFrame) %in% c(x)]) %>% apply(FUN=sum, MARGIN = 2) / sum(controlPairFrame[,c(x)]) })
+
+mapply(function(x, i) { p <- which.max(x); paste0(activityPeople[i], ": closest route with ", names(x[p]),". ", x[p], " Legs the same. ", round(similarPeopleRatio[[i]][p]* 100), "% of your route") }, similarPeople, names(similarPeople)) %>% unname
