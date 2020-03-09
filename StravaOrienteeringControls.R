@@ -5,7 +5,7 @@ library(ggplot2)
 stopifnot(!is.null(athleteBearer)) #athleteBearer ~= "Bearer 1234562ce494d8642ed33789199dc3e085456123"
 
 MAXEVENTLENGTHMINS <- 60
-eventName <- "Rawdon"
+eventName <- "BramleyFall"
 
 getFlybyActivityStream <- function (baseActivityId, compareActivityId) {
 
@@ -41,25 +41,26 @@ controlsFrame <- read.csv(paste0("~/raceRnalysis/orienteeringControls/controls-"
 
 # Map with control destinations
 ggplot(allStreamsFrame %>% arrange(time)) +
-  geom_point(aes(x=long, y=lat, color=activityId, alpha=activityId == 1234567)) +
+  geom_point(aes(x=long, y=lat, color=activityId)) +
   scale_color_brewer(type="qual", labels=activityPeople, palette = "Dark2") +
   geom_point(data=controlsFrame, aes(x=longitude, y=latitude), size=10, color="purple", shape=1) + coord_quickmap() +
   geom_text(data=controlsFrame, aes(x=longitude, y=latitude, label=control), size=10, color="purple")
-
 #geom_point(data=allStreamsFrame %>% arrange(originalTime) %>% filter(originalTime > startTimeFilter, originalTime < endTimeFilter ), aes(x=long, y=lat, color=activityId), size=5)
 plotly::ggplotly() %>%
   htmlwidgets::onRender("
                         function(el) {
                         el.on('plotly_click', function(d) {
-                        console.log(d)
-                        var pointArray = d.points.reduce(function(acc, p) { acc.x.push(p.x); acc.y.push(p.y); return acc; }, {'x':[],'y':[]} );
-                        console.log(
-                        (pointArray.y.reduce(function(acc, y) { return acc+y; }, 0) / pointArray.y.length )
-                        + ', ' +
-                        (pointArray.x.reduce(function(acc, x) { return acc+x; }, 0) / pointArray.x.length)
-                        )
+                        //console.log(d)
+                        console.log(d.points[0].y + ', ' + d.points[0].x )
+                       // var pointArray = d.points.reduce(function(acc, p) { acc.x.push(p.x); acc.y.push(p.y); return acc; }, {'x':[],'y':[]} );
+                       // console.log(
+                        //(pointArray.y.reduce(function(acc, y) { return acc+y; }, 0) / pointArray.y.length )
+                        //+ ', ' +
+                        //(pointArray.x.reduce(function(acc, x) { return acc+x; }, 0) / pointArray.x.length)
+                        //)
+                        document.getElementById('coordTitle').innerHTML = 'Coord: ' + d.points[0].y + ', ' + d.points[0].x
                         });
-                        }") %>% plotly::toWebGL() %>%
+                        }") %>% plotly::toWebGL() %>% htmlwidgets::prependContent(htmltools::tags$h1("Coord: ", id='coordTitle')) %>%
 htmlwidgets::saveWidget("~/Desktop/mapClicker.html")
 
 ###############################
@@ -69,6 +70,9 @@ htmlwidgets::saveWidget("~/Desktop/mapClicker.html")
 
 #Do you need to trim a single activity?
 #allStreamsFrame <- allStreamsFrame %>% filter((activityId == 1234567 & time < 1579118396) | activityId != 1234567 )
+
+#Once we have groupStart, we could trim all activities to start then.
+#allStreamsFrame <- allStreamsFrame %>% filter(time > penaltyScore$groupStart %>% first %>% as.numeric())
 
 
 allDistanceMatrix <- geosphere::distm(allStreamsFrame[,c("long","lat")], controlsFrame[,c("longitude","latitude")], fun = geosphere::distHaversine) %>% as.data.frame()
@@ -128,6 +132,7 @@ ggplot(
   ggtitle(paste0("Cumulative Score over time - ",eventName)) +
   ylab("Cumulative Score") +
   scale_color_brewer(type="qual", labels=activityPeople, palette = "Dark2") +
+  #scale_color_discrete(labels=activityPeople) +
   theme(
     plot.background = element_rect(fill="grey90"),
     legend.background = element_rect(fill="grey90"),
@@ -139,7 +144,38 @@ ggplot(
 
     axis.ticks.length.y =unit(.4, "cm"))
 
+
+
 ggsave(paste0("~/Desktop/StravaControlsTime-",eventName,".png"))
+
+plotly::ggplotly( p= ggplot(
+  summedScore %>% mutate("Person" = activityPeople[as.character(activityId)]) %>% rename("Score"=cumScore) %>% arrange(time),
+  aes(x=time, y=Score, color=Person )
+) +
+  geom_line() +
+  geom_point() +
+  scale_x_datetime(date_breaks="10 mins", date_labels="%H:%M") +
+  #geom_text(data = finalScores, aes(x=time, y=finalScore, label=finalScore), nudge_x=300, show.legend =FALSE) +
+
+  ggtitle(paste0("Cumulative Score over time - ",eventName)) +
+  ylab("Cumulative Score") +
+  scale_color_brewer(type="qual", labels=activityPeople, palette = "Dark2") +
+  #scale_color_discrete() +
+  theme(
+    plot.background = element_rect(fill="grey90"),
+    legend.background = element_rect(fill="grey90"),
+
+    panel.background = element_rect(fill = NA),
+    axis.ticks = element_line(color="grey70"),
+    panel.grid = element_line(color="grey70"),
+    strip.background = element_rect(fill="grey70"),
+
+    axis.ticks.length.y =unit(.4, "cm")),
+tooltip =c("Person", "time", "Score")
+) %>% plotly::config( displayModeBar=FALSE ) %>%  plotly::layout(margin=list(autoexpand=T)) %T>% { .$sizingPolicy$padding <- "0" } %>%
+# for sizing policy https://datatitian.com/how-to-turn-your-ggplot2-visualization-into-an-interactive-tweet/
+  htmlwidgets::prependContent(htmltools::tags$meta(name='viewport', content="width=device-width, user-scalable=no")) %>%
+  htmlwidgets::saveWidget("~/Desktop/BramleyScores.html")
 
 ###############################
 ## Mapping of people who went from control X -> control Y, & their time
